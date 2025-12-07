@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Photo Map Explorer (Vanilla)</title>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.5.1/mapbox-gl.css" rel="stylesheet"/>
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #000; color: #fff; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+
+      /* Light(슬레이트 롤백) */
+      body.light { background: #f3f4f6; color: #0f172a; }
+      body.light .app { background: #f3f4f6; }
+      body.light .sidebar { background: #fff; border-right: 1px solid #e2e8f0; }
+      body.light .sidebar-header { background: #fff; border-bottom: 1px solid #e2e8f0; }
+      body.light .controls { border-bottom: 1px solid #e2e8f0; }
+      body.light input[type="text"], body.light select { background: #fff; color: #0f172a; border: 1px solid #cbd5e1; }
+      body.light button { background: #e2e8f0; color: #0f172a; border: 1px solid #cbd5e1; }
+      body.light .status-box { background: #e2e8f0; }
+      body.light .photo-item { background: #fff; border: 1px solid #e2e8f0; }
+      body.light .photo-item.active { background: rgba(59,130,246,.12); border: 1px solid rgba(59,130,246,.35); }
+      body.light #timeline-bar { background: rgba(255,255,255,.85); border: 1px solid rgba(15,23,42,.10); }
+
+      .app { height: 100vh; width: 100vw; display: flex; background: #000; }
+      .sidebar { width: 340px; display: flex; flex-direction: column; background: #111; border-right: 1px solid #333; }
+      .sidebar-header { padding: 12px; background: #181818; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+      .sidebar-header h2 { margin: 0; font-size: 1.1rem; }
+      .controls { padding: 12px; border-bottom: 1px solid #333; display: flex; flex-direction: column; gap: 10px; }
+      input[type="text"], select { padding: 8px 12px; border-radius: 6px; border: 1px solid #555; background: #0b0b0b; color: #fff; }
+      button { padding: 8px 12px; border-radius: 6px; border: 1px solid #6a6a6a; background: #333; color: #fff; cursor: pointer; }
+      button:disabled { background: #555; cursor: not-allowed; }
+      .status-box { background: #222; border-radius: 4px; padding: 8px; font-size: .8rem; min-height: 3em; }
+      .photo-list { flex: 1; overflow-y: auto; padding: 8px; }
+
+      .photo-item { display: flex; gap: 10px; align-items: center; padding: 6px 8px; margin-bottom: 6px; border-radius: 6px; cursor: pointer; background: #141414; border: 1px solid #202020; }
+      .photo-item.active { background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08); }
+      .photo-item img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
+
+      .map-wrap { flex: 1; position: relative; }
+      #map { position: absolute; inset: 0; }
+
+      #map-loading { position: absolute; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; z-index: 10; font-weight: 600; transition: opacity .25s ease; }
+      #map-loading.hide { opacity: 0; pointer-events: none; }
+
+      #btnTheme { font-size: .7rem; padding: 4px 8px; border-radius: 9999px; }
+
+      /* 타임라인 바 */
+      #timeline-bar {
+        position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+        width: min(720px, 90vw);
+        background: rgba(0,0,0,.45); backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,.15); border-radius: 9999px;
+        padding: 8px 16px 12px; z-index: 20;
+      }
+      #timeline-range { width: 100%; }
+      #timeline-label { margin-top: 4px; font-size: .75rem; text-align: center; opacity: .75; }
+
+      /* 스위치 */
+      .switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+      .switch input { display: none; }
+      .switch .track { width: 42px; height: 24px; background: #555; border-radius: 9999px; position: relative; transition: .2s; }
+      .switch .thumb { width: 18px; height: 18px; background: #fff; border-radius: 50%; position: absolute; top: 3px; left: 3px; transition: .2s; }
+      .switch input:checked + .track { background: #22c55e; }
+      .switch input:checked + .track .thumb { left: 21px; }
+
+      /* Popup */
+      .mapboxgl-popup-content { background: #111 !important; border: 1px solid #333 !important; color: #fff !important; border-radius: 16px !important; padding: 10px !important; }
+      .mapboxgl-popup-tip { border-top-color: #111 !important; }
+      body.light .mapboxgl-popup-content { background: #ffffff !important; border: 1px solid rgba(15,23,42,.12) !important; color: #0f172a !important; }
+      body.light .mapboxgl-popup-tip { border-top-color: #ffffff !important; }
+      .mapboxgl-popup-content img { display: block; border-radius: 10px; background: #0f172a; }
+      body.light .mapboxgl-popup-content img { background: #ffffff; }
+
+      /* 밀도 컨트롤/범례 */
+      #region-controls { position: absolute; z-index: 25; top: 12px; left: 12px; background: #111a; border: 1px solid #333; padding: 10px; border-radius: 12px; color: #fff; width: 200px; backdrop-filter: blur(6px); }
+      #density-legend { position: absolute; z-index: 25; bottom: 12px; left: 12px; background: #111a; border: 1px solid #333; padding: 10px; border-radius: 12px; color: #fff; min-width: 180px; backdrop-filter: blur(6px); }
+      body.light #region-controls, body.light #density-legend { background:#fff; border:1px solid #e2e8f0; color:#0f172a; }
+
+      /* 모드 스위처 */
+      .mode-switch { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+      .mode-switch button { padding: 6px 8px; border-radius: 8px; background:#222; border:1px solid #444; font-size:.85rem; }
+      body.light .mode-switch button { background:#eef2f7; border-color:#cbd5e1; color:#0f172a; }
+      .mode-switch button.active { outline: 2px solid #60a5fa; }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <!-- 사이드바 -->
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <div>
+            <h2>Photo Map Explorer</h2>
+            <p style="margin: 6px 0 0; font-size: 0.75rem; opacity: 0.6">From Google Drive</p>
+          </div>
+          <button id="btnTheme">Dark</button>
+        </div>
+
+        <div class="controls">
+          <!-- 모드 스위처 -->
+          <div class="mode-switch">
+            <button id="modeBasic"  class="active">Basic</button>
+            <button id="modeGlow">Glow</button>
+            <button id="modeDensity">Density</button>
+          </div>
+
+          <button id="btnLogin">1. Google Drive 로그인</button>
+          <input id="folderInput" type="text" placeholder="2. Drive 폴더 ID 입력" />
+
+          <!-- 색상 모드 -->
+          <label style="font-size: 0.75rem; opacity: 0.65">색상 모드</label>
+          <select id="colorMode">
+            <option value="auto" selected>Auto (사진 우선, 실패 시 불꽃)</option>
+            <option value="photo">Photo dominant (사진 대표색만)</option>
+            <option value="firework">Firework palette (형광 팔레트)</option>
+          </select>
+
+          <!-- 날씨 토글 -->
+          <label style="font-size: 0.75rem; opacity: 0.65">날씨 (일 평균)</label>
+          <label class="switch">
+            <input type="checkbox" id="toggleWeather" />
+            <span class="track"><span class="thumb"></span></span>
+            <span id="weatherState" style="font-size: 0.85rem; opacity: 0.9">OFF</span>
+          </label>
+
+          <div style="display: grid; grid-template-columns: 1fr auto; gap: 8px;">
+            <button id="btnLoad" disabled>지도 로딩 중...</button>
+            <button id="btnReset">초기화</button>
+          </div>
+          <div id="status" class="status-box">지도 로딩 중...</div>
+        </div>
+
+        <div id="photoList" class="photo-list"></div>
+      </div>
+
+      <!-- 지도 -->
+      <div class="map-wrap">
+        <div id="timeline-bar">
+          <input id="timeline-range" type="range" min="0" max="0" value="0" disabled />
+          <div id="timeline-label">날짜 정보 없음</div>
+        </div>
+
+        <div id="region-controls" style="display:none;">
+          <div style="font-weight:600;margin-bottom:6px;">촬영 밀도 보기</div>
+            <label style="display:block;margin-bottom:4px;cursor:pointer;">
+              <input type="radio" name="region-level" value="sido" checked> 시도 기준
+            </label>
+            <label style="display:block;cursor:pointer;">
+              <input type="radio" name="region-level" value="sigungu"> 시군구 기준
+            </label>
+          </div>
+
+        <div id="density-legend" style="display:none;">
+          <div style="font-weight:600;margin-bottom:6px;">촬영 수(개)</div>
+          <div id="legend-scale"></div>
+          <div id="legend-range" style="font-size:12px;opacity:.9;">0 ~ 0</div>
+        </div>
+
+        <div id="map"></div>
+        <div id="map-loading">지도를 불러오는 중...</div>
+      </div>
+    </div>
+
+    <!-- JS -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.5.1/mapbox-gl.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+
+    <script>
+      console.log("HTML 버전 실행됨 ✅");
+
+      // ====== 토큰 ======
+      const MAPBOX_TOKEN = "pk.eyJ1IjoiY2hvY293b25ueSIsImEiOiJjbWg5dmJvOGoxajUyMmtzNXRianRmazkxIn0.iRc3ft0YLDvywX9OOtIeXA";
+      const GOOGLE_CLIENT_ID = "812584123635-7hg0vagtcqh26u1510s782s0jrn90go4.apps.googleusercontent.com";
+      mapboxgl.accessToken = MAPBOX_TOKEN;
+
+      // GeoJSON 경로
+      const SIDO_GEOJSON_URL    = "./geojson/korea_sido.geojson";
+      const SIGUNGU_GEOJSON_URL = "./geojson/korea_sigungu.geojson";
+
+      // ====== 엘리먼트 ======
+      const statusEl = document.getElementById("status");
+      const btnLogin = document.getElementById("btnLogin");
+      const btnLoad = document.getElementById("btnLoad");
+      const btnReset = document.getElementById("btnReset");
+      const folderInput = document.getElementById("folderInput");
+      const photoListEl = document.getElementById("photoList");
+      const mapLoadingEl = document.getElementById("map-loading");
+      const btnTheme = document.getElementById("btnTheme");
+      const timelineRange = document.getElementById("timeline-range");
+      const timelineLabel = document.getElementById("timeline-label");
+      const colorModeSelect = document.getElementById("colorMode");
+      const toggleWeather = document.getElementById("toggleWeather");
+      const weatherState = document.getElementById("weatherState");
+      const legendScale = document.getElementById("legend-scale");
+      const legendRange = document.getElementById("legend-range");
+      const toggleDensityEl = document.getElementById("toggleDensity");
+      const densityState = document.getElementById("densityState");
+
+      // 모드 버튼
+      const modeBasicBtn   = document.getElementById("modeBasic");
+      const modeGlowBtn    = document.getElementById("modeGlow");
+      const modeDensityBtn = document.getElementById("modeDensity");
+
+      // ====== 상태 ======
+      let map = null, isMapReady = false, driveAccessToken = null, selectedPhotoId = null;
+      let currentTheme = "dark";
+      let allPhotos = [];   // 전체
+      let lastPhotos = [];  // 현재 화면(필터 적용 후)
+      let timelineMonths = [];
+      let currentTimelineIndex = -1;
+      let currentColorMode = "auto";
+      let weatherEnabled = false;
+
+      // Choropleth
+      let boundaryCache = { sido: null, sigungu: null };
+      let currentLevel = "sido";
+      let maxCountGlobal = 0;
+      let densityEnabled = false;
+
+      // 클릭 핸들러 중복 방지
+      let photosCoreClickBound = false;
+
+      // 지도 모드 (기본값 Basic)
+      let currentMapMode = "basic"; // 'basic' | 'glow' | 'density'
+
+      // 팔레트
+      const FIREWORK_PALETTE = ["#ffcc00","#ff6f00","#ff4081","#f50057","#ff8a80","#ff80ab","#ea80fc","#b388ff","#82b1ff","#448aff","#18ffff","#64ffda","#69f0ae","#00e676","#ffee58","#ffd740"];
+      const CHORO_COLORS = [
+        "#dbeafe", // 1단계 (연한 파랑)
+        "#93c5fd", // 2단계
+        "#60a5fa", // 3단계
+        "#3b82f6", // 4단계
+        "#2563eb", // 5단계
+        "#1d4ed8", // 6단계 (진한 파랑)
+        "#1e40af"  // 7단계 (아주 진한 파랑)
+      ];
+
+      // 날씨 캐시
+      const weatherCache = new Map();
+      const sharedCanvas = document.createElement("canvas");
+      const sharedCtx = sharedCanvas.getContext("2d");
+
+      // ====== 유틸 ======
+      function setStatus(msg){ statusEl.textContent = msg; }
+      function brightenColor(hex, factor=1.4){
+        const rgb = hex.match(/[a-f0-9]{2}/gi).map(x=>parseInt(x,16));
+        const bright = rgb.map(v=>Math.min(255, Math.floor(v*factor)));
+        return "#"+bright.map(x=>x.toString(16).padStart(2,"0")).join("").toLowerCase();
+      }
+      function parsePhotoDate(str){
+        if (!str) return null;
+        const d1 = new Date(str); if (!isNaN(d1.getTime())) return d1;
+        const m = str.match(/^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/);
+        if (m) {
+          const d2 = new Date(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}Z`);
+          if (!isNaN(d2.getTime())) return d2;
+        }
+        if (str[4]===":" && str[7]===":"){
+          const guess = str.slice(0,4)+"-"+str.slice(5,7)+"-"+str.slice(8,10)+"T"+str.slice(11).replace(" ","T")+"Z";
+          const d3 = new Date(guess);
+          if (!isNaN(d3.getTime())) return d3;
+        }
+        return null;
+      }
+      function ymdLocal(d){ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), da=String(d.getDate()).padStart(2,"0"); return `${y}-${m}-${da}`; }
+      function pickColorForPhoto(p){
+        if (currentColorMode==="photo") return p.dominantColor || p.paletteColor || "#cccccc";
+        if (currentColorMode==="firework") return p.paletteColor || p.dominantColor || "#cccccc";
+        return p.dominantColor || p.paletteColor || "#cccccc";
+      }
+      function mapLimit(arr, limit, iteratee){
+        const result = new Array(arr.length);
+        let idx = 0;
+        const workers = Array.from({length: limit}, async () => {
+          while (true) {
+            const cur = idx++; if (cur>=arr.length) break;
+            result[cur] = await iteratee(arr[cur], cur);
+          }
+        });
+        return Promise.all(workers).then(()=>result);
+      }
+
+      // ====== 지도 ======
+      function initMap(styleUrl="mapbox://styles/mapbox/dark-v11"){
+        map = new mapboxgl.Map({
+          container: "map",
+          style: styleUrl,
+          center: [126.978, 37.5665],
+          zoom: 11,
+          attributionControl: false,
+        });
+
+        map.on("error", (e)=>{ console.error("[MAPBOX ERROR]", e.error); setStatus("지도 로딩 중 오류 발생(Mapbox). 콘솔 확인"); });
+
+        map.on("load", () => {
+          setupSourcesAndLayers();
+          ensureWeatherLayers();
+          isMapReady = true;
+          setStatus("✅ 지도 로딩 완료. Google Drive 로그인 → 폴더 ID 입력");
+          btnLoad.disabled = false; btnLoad.textContent = "3. 사진 불러오기";
+          if (mapLoadingEl) mapLoadingEl.classList.add("hide");
+
+          setLevel(currentLevel);
+          applyDensityVisibility();
+
+          if (lastPhotos.length > 0) {
+            updateMapData(lastPhotos);
+            refreshChoroplethWithFilteredPoints(getCurrentPhotoPoints());
+          }
+
+          applyMapMode();
+        });
+
+        map.on("style.load", () => {
+          setupSourcesAndLayers();
+          ensureWeatherLayers();
+
+          setLevel(currentLevel);
+          applyDensityVisibility();
+
+          if (lastPhotos.length > 0) {
+            updateMapData(lastPhotos);
+            updateWeatherLayer(lastPhotos);
+            refreshChoroplethWithFilteredPoints(getCurrentPhotoPoints());
+          }
+
+          applyMapMode();
+        });
+      }
+
+      function setupSourcesAndLayers(){
+        // 원본 포인트(글로우/코어 전용)
+        if (!map.getSource("photos")) {
+          map.addSource("photos", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        }
+
+        // 클러스터용 소스
+        if (!map.getSource("photos-cluster")) {
+          map.addSource("photos-cluster", {
+            type: "geojson",
+            data: { type: "FeatureCollection", features: [] },
+            cluster: true,
+            clusterMaxZoom: 14,
+            clusterRadius: 48
+          });
+        }
+
+        // Glow 레이어
+        if (!map.getLayer("photos-glow")) {
+          map.addLayer({
+            id: "photos-glow",
+            type: "circle",
+            source: "photos",
+            paint: {
+              "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 24, 14, 72],
+              "circle-color": ["get","color"],
+              "circle-opacity": 0.35,
+              "circle-blur": 0.25,
+            },
+          });
+        }
+
+        // Core 레이어
+        if (!map.getLayer("photos-core")) {
+          map.addLayer({
+            id: "photos-core",
+            type: "circle",
+            source: "photos",
+            paint: {
+              "circle-radius": ["interpolate", ["linear"], ["zoom"], 12, 3, 14, 8],
+              "circle-color": ["get","color"],
+              "circle-opacity": ["interpolate", ["exponential",1.5], ["zoom"], 0,0, 11.5,0, 12.0,0.25, 13.0,0.7, 14.0,1.0],
+              "circle-stroke-color": "#fff",
+              "circle-stroke-width": 0.5,
+            },
+          });
+        }
+
+        // ===== Basic 모드: 클러스터 레이어 =====
+        // 1) 클러스터 원
+        if (!map.getLayer("clusters")) {
+          map.addLayer({
+            id: "clusters",
+            type: "circle",
+            source: "photos-cluster",
+            filter: ["has", "point_count"],
+            paint: {
+              "circle-color": [
+                "step", ["get", "point_count"],
+                "#60a5fa", 10, "#34d399", 30, "#f59e0b", 100, "#ef4444"
+              ],
+              "circle-radius": [
+                "step", ["get", "point_count"],
+                16, 10, 20, 30, 26, 100, 32
+              ],
+              "circle-opacity": 0.9
+            }
+          });
+        }
+        // 2) 클러스터 숫자
+        if (!map.getLayer("cluster-count")) {
+          map.addLayer({
+            id: "cluster-count",
+            type: "symbol",
+            source: "photos-cluster",
+            filter: ["has", "point_count"],
+            layout: {
+              "text-field": ["get", "point_count_abbreviated"],
+              "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+              "text-size": 12
+            },
+            paint: { "text-color": "#0f172a" }
+          });
+        }
+
+        // 3) 비클러스터 포인트: 사진 썸네일로 표시
+        if (!map.getLayer("unclustered-thumb")) {
+          map.addLayer({
+            id: "unclustered-thumb",
+            type: "symbol",
+            source: "photos-cluster",
+            filter: ["!", ["has", "point_count"]],
+            layout: {
+              "icon-image": ["get", "imgId"],
+              "icon-size": ["interpolate", ["linear"], ["zoom"], 4, 0.25, 10, 0.5, 14, 0.7, 16, 0.9],
+              "icon-allow-overlap": true,
+              "icon-ignore-placement": true
+            }
+          });
+        }
+        // (이전 원형 점 레이어 사용 안 함)
+        if (map.getLayer("unclustered-point")) {
+          map.setLayoutProperty("unclustered-point","visibility","none");
+        }
+
+        // 팝업(중복 방지)
+        if (!photosCoreClickBound) {
+          map.on("click", "photos-core", handlePointPopup);
+          map.on("click", "unclustered-thumb", handlePointPopup);
+          map.on("click", "clusters", (e) => {
+            const features = map.queryRenderedFeatures(e.point, { layers: ["clusters"] });
+            const clusterId = features[0].properties.cluster_id;
+            map.getSource("photos-cluster").getClusterExpansionZoom(clusterId, (err, zoom) => {
+              if (err) return;
+              map.easeTo({ center: features[0].geometry.coordinates, zoom });
+            });
+          });
+          photosCoreClickBound = true;
+        }
+      }
+
+      function handlePointPopup(e){
+        const f = e.features && e.features[0]; if (!f) return;
+        const p = f.properties || {};
+        const title = p.label || "(사진)";
+        const img   = p.img ? `<img src="${p.img}" style="width:100%;border-radius:8px;display:block"/>` : "";
+        const time  = p.time || "";
+        new mapboxgl.Popup({ closeButton:false, maxWidth:"280px" })
+          .setLngLat(f.geometry.coordinates)
+          .setHTML(`
+            <div style="font-weight:600;margin-bottom:6px">${title}</div>
+            ${img}
+            ${time ? `<div style="margin-top:6px;font-size:12px;opacity:.8">${time}</div>` : ""}
+          `)
+          .addTo(map);
+      }
+
+      // ====== 날씨 링 ======
+      function ensureWeatherLayers(){
+        if (!map.getSource("photo-weather")) {
+          map.addSource("photo-weather", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        }
+        if (!map.getLayer("photo-weather")) {
+          map.addLayer({
+              id: "photo-weather",
+              type: "circle",
+              source: "photo-weather",
+              paint: {
+                "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 6, 14, 14],
+                "circle-color": ["interpolate", ["linear"], ["get","temp"],
+                  -10,"#4fc3f7", 0,"#81d4fa", 10,"#ffd54f", 20,"#ffb74d", 30,"#ef5350", 40,"#d32f2f"
+                ],
+                "circle-opacity": 0.35,
+                "circle-stroke-color": "#fff",
+                "circle-stroke-width": 0.0,
+                "circle-blur": 0.15,
+              },
+              layout: { visibility: "none" },
+            },
+            "photos-core"
+          );
+        }
+      }
+
+      initMap();
+
+      // ====== 런타임 썸네일 스프라이트 보장 ======
+      function loadImageAsync(url){
+        return new Promise((resolve, reject)=>{
+          map.loadImage(url, (err, image)=>{ if (err) reject(err); else resolve(image); });
+        });
+      }
+      async function ensureThumbSprites(photos){
+        if (!map) return;
+        // 썸네일 있는 것만, 과도한 동시 로딩 방지
+        const targets = photos.filter(p=>p.thumb);
+        await mapLimit(targets, 8, async (p)=>{
+          const id = `thumb-${p.id}`;
+          if (!map.hasImage(id)) {
+            try {
+              const img = await loadImageAsync(p.thumb);
+              map.addImage(id, img, { pixelRatio: 2 });
+            } catch (e) {
+              // 썸네일 로딩 실패 시 스킵
+            }
+          }
+        });
+      }
+
+      // ====== 데이터 반영 ======
+      function updateMapData(photos){
+  lastPhotos = photos; // 현재 화면에 표시될 사진 목록 업데이트
+
+  // 1. 상세 포인트 (Glow/Popup용) 업데이트
+  const fc = {
+    type: "FeatureCollection",
+    features: photos.map((p)=>({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [p.lon, p.lat] },
+      properties: {
+        id: p.id, color: pickColorForPhoto(p),
+        img: p.thumb||"", label: p.name, time: p.time||""
+      }
+    }))
+  };
+  const src = map.getSource("photos"); if (src) src.setData(fc);
+
+  // 2. 클러스터용 포인트 업데이트
+  const fcCluster = {
+    type: "FeatureCollection",
+    features: photos.map((p)=>({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [p.lon, p.lat] },
+      properties: {
+        color: pickColorForPhoto(p),
+        imgId: `thumb-${p.id}`,
+        img: p.thumb || "",
+        label: p.name || "",
+        time: p.time || ""
+      }
+    }))
+  };
+  const src2 = map.getSource("photos-cluster"); if (src2) src2.setData(fcCluster);
+
+  // 3. 썸네일 스프라이트 로딩
+  ensureThumbSprites(photos);
+
+  // 4. [핵심] Density 모드일 경우, 필터링된 데이터로 구역 색칠 다시 하기
+  // 타임라인을 움직이면 'lastPhotos'가 변하고, 이를 기반으로 다시 계산합니다.
+  if (currentMapMode === "density") {
+    refreshChoroplethWithFilteredPoints(getCurrentPhotoPoints());
+  }
+}
+
+      // 리스트
+      function renderPhotoList(photos){
+        photoListEl.innerHTML = "";
+        const textColor = currentTheme === "dark" ? "#ffffff" : "#0f172a";
+
+        photos.forEach((p)=>{
+          const c = pickColorForPhoto(p);
+          const div = document.createElement("div");
+          div.className = "photo-item"; div.dataset.id = p.id;
+          if (currentTheme === "dark") { div.style.borderLeft = "4px solid rgba(255,255,255,.03)"; div.style.background = "#141414"; }
+          else { div.style.borderLeft = `4px solid ${c}`; div.style.background = "#ffffff"; }
+
+          div.innerHTML = `
+            <img src="${p.thumb||""}" style="background:${c}" />
+            <div style="flex:1;word-break:break-all;font-size:.85rem;color:${textColor};">
+              <div style="line-height:1.2;">${p.name}</div>
+            </div>
+          `;
+          div.addEventListener("click", ()=>{
+            selectedPhotoId = p.id; highlightPhotoInList(p.id);
+            map.flyTo({ center:[p.lon,p.lat], zoom: 15, duration: 1200 });
+          });
+          photoListEl.appendChild(div);
+        });
+      }
+      function highlightPhotoInList(id){
+        Array.from(photoListEl.children).forEach(el => {
+          el.classList.toggle("active", el.dataset.id === id);
+        });
+      }
+
+      // ====== Google OAuth ======
+      async function getDriveToken(){
+        if (!window.google || !window.google.accounts || !window.google.accounts.oauth2) {
+          throw new Error("Google OAuth 라이브러리가 아직 로드되지 않았습니다.");
+        }
+        return new Promise((resolve, reject)=>{
+          const client = window.google.accounts.oauth2.initTokenClient({
+            client_id: GOOGLE_CLIENT_ID,
+            scope: "https://www.googleapis.com/auth/drive.readonly",
+            callback: (resp)=>{ if (resp && resp.access_token) resolve(resp.access_token); else reject(new Error("토큰을 받지 못했습니다.")); },
+          });
+          client.requestAccessToken();
+        });
+      }
+
+      btnLogin.addEventListener("click", async ()=>{
+        try {
+          setStatus("Google 계정 인증 중...");
+          driveAccessToken = await getDriveToken();
+          setStatus("✅ Google 연결됨. 폴더 ID를 입력한 뒤 불러오세요.");
+          btnLogin.disabled = true;
+        } catch (err) {
+          console.error(err); setStatus("Google 로그인 실패: " + err.message);
+        }
+      });
+
+      // Drive 사진 목록
+      async function listDrivePhotos(accessToken, folderId){
+        const out = []; let pageToken;
+        while (true) {
+          const params = new URLSearchParams({
+            q: `'${folderId}' in parents and mimeType contains 'image/' and trashed=false`,
+            fields: "files(id,name,thumbnailLink,createdTime,imageMediaMetadata(location,time,cameraMake,cameraModel)),nextPageToken",
+            pageSize: "1000",
+          });
+          if (pageToken) params.set("pageToken", pageToken);
+
+          const res = await fetch("https://www.googleapis.com/drive/v3/files?" + params.toString(),
+            { headers: { Authorization: `Bearer ${accessToken}` } }
+          );
+          if (!res.ok) {
+            const t = await res.text().catch(()=> "");
+            console.error("Drive list error:", res.status, t);
+            throw new Error("Drive list error: " + res.status);
+          }
+          const data = await res.json();
+
+          for (const f of data.files ?? []) {
+            const loc = f.imageMediaMetadata?.location;
+            if (loc?.latitude && loc?.longitude) {
+              out.push({
+                id: f.id, name: f.name, thumb: f.thumbnailLink,
+                time: f.imageMediaMetadata?.time ?? f.createdTime,
+                lat: loc.latitude, lon: loc.longitude,
+              });
+            }
+          }
+          pageToken = data.nextPageToken; if (!pageToken) break;
+        }
+        return out;
+      }
+
+      // 대표색 추출
+      async function getDominantColorFromDrive(fileId, accessToken){
+        const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        if (!res.ok) throw new Error("이미지 다운로드 실패: " + res.status);
+        const blob = await res.blob(); const imgUrl = URL.createObjectURL(blob);
+        const img = await new Promise((resolve, reject)=>{
+          const i = new Image(); i.onload = ()=>resolve(i); i.onerror = (e)=>reject(e); i.src = imgUrl;
+        });
+
+        const maxSize = 60;
+        const ratio = Math.min(maxSize / img.width, maxSize / img.height, 1);
+        sharedCanvas.width = Math.floor(img.width * ratio);
+        sharedCanvas.height = Math.floor(img.height * ratio);
+        sharedCtx.drawImage(img, 0, 0, sharedCanvas.width, sharedCanvas.height);
+        const { data } = sharedCtx.getImageData(0,0,sharedCanvas.width,sharedCanvas.height);
+
+        const STEP = 32, buckets = {};
+        for (let i=0;i<data.length;i+=4*STEP){
+          const r = data[i], g = data[i+1], b = data[i+2];
+          const rq=Math.floor(r/16), gq=Math.floor(g/16), bq=Math.floor(b/16);
+          const key = rq+"-"+gq+"-"+bq;
+          buckets[key] = (buckets[key]||0)+1;
+        }
+
+        URL.revokeObjectURL(imgUrl);
+        let bestKey=null, bestCount=-1;
+        for (const [k,v] of Object.entries(buckets)) { if (v>bestCount){ bestCount=v; bestKey=k; } }
+        if (!bestKey) return null;
+
+        const [rq,gq,bq] = bestKey.split("-").map(Number);
+        const rr=rq*16+8, gg=gq*16+8, bb=bq*16+8;
+        const hex = "#"+[rr,gg,bb].map(x=>x.toString(16).padStart(2,"0")).join("").toLowerCase();
+        return brightenColor(hex, 1.5);
+      }
+
+      // 사진 불러오기
+      btnLoad.addEventListener("click", async ()=>{
+        if (!isMapReady){ setStatus("지도 아직 준비 안 됨"); return; }
+        const folderId = folderInput.value.trim();
+        if (!folderId){ setStatus("오류: 폴더 ID를 입력하세요."); return; }
+        if (!driveAccessToken){ setStatus("오류: 먼저 Google Drive에 로그인하세요."); return; }
+
+        setStatus("폴더에서 사진 목록을 불러오는 중..."); btnLoad.disabled = true;
+
+        try {
+          const files = await listDrivePhotos(driveAccessToken, folderId);
+          if (files.length === 0) {
+            setStatus("완료: GPS 정보가 있는 사진이 없습니다.");
+            btnLoad.disabled = false; btnLoad.textContent = "3. 사진 불러오기"; return;
+          }
+
+          setStatus(`사진 ${files.length}장을 불러왔습니다. 대표 색 추출 중...`);
+          let done = 0;
+          const processed = await mapLimit(files, 6, async (f, idx)=>{
+            const paletteColor = FIREWORK_PALETTE[idx % FIREWORK_PALETTE.length];
+            let dominantColor = null;
+            try { dominantColor = await getDominantColorFromDrive(f.id, driveAccessToken); }
+            catch(e){ console.warn("대표색 추출 실패:", e); }
+            done++; if (done % 5 === 0 || done === files.length) setStatus(`대표 색 추출 중... (${done}/${files.length})`);
+            return { ...f, dominantColor, paletteColor, weather: null };
+          });
+
+          allPhotos = processed.slice();
+          updateMapData(processed);
+          renderPhotoList(processed);
+          buildTimeline(allPhotos);
+
+          const bounds = new mapboxgl.LngLatBounds();
+          processed.forEach(p => bounds.extend([p.lon, p.lat]));
+          map.fitBounds(bounds, { padding: 80, duration: 1200 });
+
+          if (weatherEnabled) { await loadWeatherForSet(processed); }
+
+          setStatus(`완료: ${processed.length}장의 사진을 지도에 표시했습니다.`);
+        } catch (err) {
+          console.error(err); setStatus("오류: " + err.message);
+        } finally {
+          btnLoad.disabled = false; btnLoad.textContent = "3. 사진 불러오기";
+        }
+      });
+
+      // 타임라인
+      function buildTimeline(photos){
+        const bucket = new Map();
+        photos.forEach(p=>{
+          const d = parsePhotoDate(p.time); if (!d) return;
+          const y=d.getFullYear(), m=d.getMonth()+1, key=`${y}-${String(m).padStart(2,"0")}`;
+          if (!bucket.has(key)) bucket.set(key, {year:y, month:m, count:0});
+          bucket.get(key).count++;
+        });
+
+        const months = Array.from(bucket.values())
+          .filter(it=>it.count>0)
+          .sort((a,b)=> a.year===b.year ? a.month-b.month : a.year-b.year)
+          .map((it,idx)=>({...it, index:idx, label:`${it.year}년 ${it.month}월 (${it.count}장)`}));
+
+        if (months.length===0){
+          timelineMonths=[]; timelineRange.min=0; timelineRange.max=0; timelineRange.value=0; timelineRange.disabled=true; timelineLabel.textContent="날짜 정보 없음";
+          return;
+        }
+
+        timelineMonths = months; timelineRange.disabled=false; timelineRange.min=0; timelineRange.max=months.length; timelineRange.value=months.length;
+        timelineLabel.textContent="전체 기간"; currentTimelineIndex = -1;
+      }
+
+      function applyTimelineFilter(index){
+        if (index===-1 || index>=timelineMonths.length){
+          updateMapData(allPhotos); renderPhotoList(allPhotos); timelineLabel.textContent="전체 기간";
+          if (allPhotos.length>0 && map){
+            const b = new mapboxgl.LngLatBounds();
+            allPhotos.forEach(p=>b.extend([p.lon,p.lat]));
+            map.fitBounds(b, { padding: 80, duration: 800 });
+          }
+          if (weatherEnabled) loadWeatherForSet(allPhotos); else updateWeatherLayer([]);
+          return;
+        }
+
+        const target = timelineMonths[index];
+        const filtered = allPhotos.filter(p=>{
+          const d = parsePhotoDate(p.time); if (!d) return false;
+          return d.getFullYear()===target.year && (d.getMonth()+1)===target.month;
+        });
+
+        updateMapData(filtered); renderPhotoList(filtered); timelineLabel.textContent = target.label;
+
+        if (filtered.length>0 && map){
+          const b = new mapboxgl.LngLatBounds();
+          filtered.forEach(p=>b.extend([p.lon,p.lat]));
+          map.fitBounds(b, { padding: 80, duration: 800 });
+        }
+        if (weatherEnabled) loadWeatherForSet(filtered); else updateWeatherLayer([]);
+      }
+
+      if (timelineRange){
+        timelineRange.addEventListener("input", (e)=>{
+          const v = Number(e.target.value);
+          if (timelineMonths.length===0) return;
+          if (v>=timelineMonths.length){ currentTimelineIndex=-1; applyTimelineFilter(-1); }
+          else { currentTimelineIndex=v; applyTimelineFilter(v); }
+        });
+      }
+
+      // 색상 모드 변경
+      colorModeSelect.addEventListener("change", ()=>{
+        currentColorMode = colorModeSelect.value;
+        if (currentTimelineIndex===-1){ updateMapData(allPhotos); renderPhotoList(allPhotos); }
+        else { applyTimelineFilter(currentTimelineIndex); }
+      });
+
+      // 날씨 토글
+      toggleWeather.addEventListener("change", async ()=>{
+        weatherEnabled = toggleWeather.checked;
+        weatherState.textContent = weatherEnabled ? "ON" : "OFF";
+        if (!map) return;
+        map.setLayoutProperty("photo-weather", "visibility", weatherEnabled ? "visible" : "none");
+        if (weatherEnabled){
+          const target = currentTimelineIndex===-1 ? allPhotos : lastPhotos;
+          await loadWeatherForSet(target);
+        } else {
+          updateMapData(lastPhotos); renderPhotoList(lastPhotos); setStatus("날씨 레이어 OFF");
+        }
+      });
+
+      // 날씨
+      function round2(x){ return Math.round(x*100)/100; }
+      function weatherCodeToText(code){
+        if (code===0) return "맑음";
+        if ([1,2,3].includes(code)) return "구름";
+        if (code>=51 && code<=67) return "이슬비/비";
+        if (code>=71 && code<=77) return "눈/싸락눈";
+        if (code>=80 && code<=82) return "소나기";
+        if (code>=95 && code<=99) return "뇌우";
+        return "기타";
+      }
+      async function fetchDailyWeather(lat, lon, dateStr){
+        const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${dateStr}&end_date=${dateStr}&daily=temperature_2m_mean,precipitation_sum,weathercode&timezone=Asia/Seoul`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Weather HTTP " + res.status);
+        const data = await res.json(); if (!data.daily) return null;
+        return { temp: data.daily.temperature_2m_mean?.[0] ?? null, rain: data.daily.precipitation_sum?.[0] ?? null, code: data.daily.weathercode?.[0] ?? null };
+      }
+      async function getWeatherCached(lat, lon, dateStr){
+        const key = `${round2(lat)},${round2(lon)}|${dateStr}`;
+        const cached = weatherCache.get(key); if (cached) return cached;
+        const p = fetchDailyWeather(lat, lon, dateStr).catch(()=>null);
+        weatherCache.set(key, p);
+        const data = await p; weatherCache.set(key, data);
+        return data;
+      }
+      async function loadWeatherForSet(photos){
+        if (!photos || photos.length===0){ updateWeatherLayer([]); return; }
+        setStatus(`날씨 불러오는 중... (0/${photos.length})`);
+        let done = 0;
+        await mapLimit(photos, 6, async (p)=>{
+          const d = parsePhotoDate(p.time);
+          if (!d) { p.weather = null; }
+          else {
+            const dateStr = ymdLocal(d);
+            const w = await getWeatherCached(p.lat, p.lon, dateStr);
+            p.weather = w;
+          }
+          done++; if (done % 5 === 0 || done === photos.length) setStatus(`날씨 불러오는 중... (${done}/${photos.length})`);
+        });
+        updateMapData(photos);
+        updateWeatherLayer(photos);
+        setStatus("날씨 업데이트 완료");
+      }
+      function updateWeatherLayer(photos){
+        const src = map.getSource("photo-weather"); if (!src) return;
+        if (!weatherEnabled){
+          map.setLayoutProperty("photo-weather", "visibility", "none");
+          src.setData({ type:"FeatureCollection", features:[] }); return;
+        }
+        const feats = photos
+          .filter(p=> p.weather && p.weather.temp!==null && p.weather.temp!==undefined)
+          .map(p=> ({
+            type:"Feature",
+            geometry:{ type:"Point", coordinates:[p.lon, p.lat] },
+            properties:{ temp: Number(p.weather.temp) },
+          }));
+        src.setData({ type:"FeatureCollection", features: feats });
+        map.setLayoutProperty("photo-weather", "visibility", feats.length ? "visible" : "none");
+      }
+
+      // 초기화
+      btnReset.addEventListener("click", ()=>{
+        photoListEl.innerHTML = ""; selectedPhotoId = null;
+        allPhotos = []; lastPhotos = []; timelineMonths = []; currentTimelineIndex = -1;
+
+        if (map && map.getSource("photos")) {
+          map.getSource("photos").setData({ type:"FeatureCollection", features:[] });
+          map.flyTo({ center:[126.978,37.5665], zoom: 11 });
+        }
+        if (map && map.getSource("photos-cluster")) {
+          map.getSource("photos-cluster").setData({ type:"FeatureCollection", features:[] });
+        }
+        if (map && map.getSource("photo-weather")) {
+          map.getSource("photo-weather").setData({ type:"FeatureCollection", features:[] });
+          map.setLayoutProperty("photo-weather", "visibility", "none");
+        }
+        clearChoroplethLayer("sido");
+        clearChoroplethLayer("sigungu");
+        updateLegend(0);
+        if (toggleDensityEl) toggleDensityEl.checked = false;
+        densityEnabled = false;
+        applyDensityVisibility();
+
+        timelineRange.min=0; timelineRange.max=0; timelineRange.value=0; timelineRange.disabled=true;
+        timelineLabel.textContent="날짜 정보 없음";
+        setStatus("초기화됨. 다시 로그인/불러오기 하세요.");
+      });
+
+      // 테마
+      btnTheme.addEventListener("click", ()=>{
+        if (currentTheme==="dark"){
+          currentTheme="light"; document.body.classList.add("light"); btnTheme.textContent="Light";
+          map.setStyle("mapbox://styles/mapbox/light-v11");
+        } else {
+          currentTheme="dark"; document.body.classList.remove("light"); btnTheme.textContent="Dark";
+          map.setStyle("mapbox://styles/mapbox/dark-v11");
+        }
+        if (currentTimelineIndex===-1) renderPhotoList(allPhotos);
+        else applyTimelineFilter(currentTimelineIndex);
+      });
+
+      // ===== 모드 스위치 =====
+      function setActiveModeButton(){
+        [modeBasicBtn, modeGlowBtn, modeDensityBtn].forEach(b=>b.classList.remove("active"));
+        if (currentMapMode==="basic") modeBasicBtn.classList.add("active");
+        if (currentMapMode==="glow") modeGlowBtn.classList.add("active");
+        if (currentMapMode==="density") modeDensityBtn.classList.add("active");
+      }
+
+      modeBasicBtn.addEventListener("click", ()=>{ currentMapMode="basic"; applyMapMode(); });
+      modeGlowBtn.addEventListener("click",  ()=>{ currentMapMode="glow";  applyMapMode(); });
+      modeDensityBtn.addEventListener("click",()=>{ currentMapMode="density"; applyMapMode(); });
+
+      function setLayerVisibility(id, vis) {
+        if (map && map.getLayer(id)) map.setLayoutProperty(id, "visibility", vis);
+      }
+
+      function applyMapMode(){
+        setActiveModeButton();
+
+        // 컨트롤 UI 표시 여부
+        const showDensityUI = (currentMapMode === "density");
+        document.getElementById("region-controls").style.display = showDensityUI ? "block" : "none";
+        document.getElementById("density-legend").style.display  = showDensityUI ? "block" : "none";
+
+        // 기존 밀도 레이어 숨김 함수
+        const hideDensityLayers = () => {
+          ["sido", "sigungu"].forEach(lvl => {
+            setLayerVisibility(`regions-${lvl}-fill`, "none");
+            setLayerVisibility(`regions-${lvl}-outline`, "none");
+          });
+        };
+
+        if (currentMapMode === "basic") {
+          setLayerVisibility("clusters", "visible");
+          setLayerVisibility("cluster-count", "visible");
+          setLayerVisibility("unclustered-thumb", "visible");
+          setLayerVisibility("photos-glow", "none");
+          setLayerVisibility("photos-core", "none");
+          hideDensityLayers();
+          setStatus("기본형 지도: 썸네일 & 클러스터 ON");
+
+        } else if (currentMapMode === "glow") {
+          setLayerVisibility("clusters", "none");
+          setLayerVisibility("cluster-count", "none");
+          setLayerVisibility("unclustered-thumb", "none");
+          setLayerVisibility("photos-glow", "visible");
+          setLayerVisibility("photos-core", "visible");
+          hideDensityLayers();
+          setStatus("Glow 지도");
+
+        } else if (currentMapMode === "density") {
+          setLayerVisibility("clusters", "none");
+          setLayerVisibility("cluster-count", "none");
+          setLayerVisibility("unclustered-thumb", "none");
+          // 밀도 지도 위에 점만 표시 (Glow 효과는 끔)
+          setLayerVisibility("photos-glow", "none");
+          setLayerVisibility("photos-core", "visible");
+          
+          // ★ 핵심: 스위치 확인 없이 무조건 실행
+          setLevel(currentLevel);
+          setStatus("지역구 밀도 지도");
+          }
+        }
+
+      // =============================
+      // ▶▶ 촬영 밀도(Choropleth)
+      // =============================
+      function getColorByCount(count, maxCount){
+        if (!maxCount) return CHORO_COLORS[0];
+        const t = Math.min(count / maxCount, 1);
+        const idx = Math.round(t * (CHORO_COLORS.length - 1));
+        return CHORO_COLORS[idx];
+      }
+      function updateLegend(maxCount){
+        if (!legendScale || !legendRange) return;
+        legendScale.innerHTML = "";
+        for (let i=0; i<CHORO_COLORS.length; i++){
+          const cell = document.createElement("div");
+          cell.style.background = CHORO_COLORS[i];
+          legendScale.appendChild(cell);
+        }
+        legendRange.textContent = `0 ~ ${maxCount || 0}`;
+      }
+      function getCurrentPhotoPoints(){
+  // 타임라인 등이 적용되어 lastPhotos가 있다면 그것을 쓰고, 아니면 전체를 씀
+  const src = (lastPhotos && lastPhotos.length > 0) ? lastPhotos : allPhotos;
+  // 좌표 객체로 변환
+  return src.map(p => ({ lng: p.lon, lat: p.lat }));
+}
+     function aggregateCounts(geojson, points){
+  // 1. 초기화: count 0으로 리셋 및 ID 부여
+  geojson.features.forEach((f, i) => {
+    if (!f.properties) f.properties = {};
+    f.properties.count = 0;
+    
+    // ★ 중요: Mapbox setFeatureState를 쓰려면 최상위 id가 필수입니다.
+    // 기존 id가 없으면 인덱스(i)를 id로 할당합니다.
+    if (f.id === undefined || f.id === null) {
+      f.id = i;
+    }
+  });
+
+  // 사진 데이터가 없으면 바로 리턴
+  if (!points || points.length === 0) {
+    console.log("밀도 계산: 사진 포인트가 없습니다.");
+    return { geojson, maxCount: 0 };
+  }
+
+  // 2. 포함 여부 계산 (Turf.js)
+  let matchCount = 0;
+  for (const pt of points){
+    // 수정: Google Drive 데이터는 .lon / .lat을 사용함
+    // 데이터가 lng로 올 수도 있으니 둘 다 체크
+    const x = pt.lon ?? pt.lng;
+    const y = pt.lat;
+
+    if (x == null || y == null) continue;
+
+    const p = turf.point([x, y]);
+
+    for (const f of geojson.features) {
+      if (f.geometry && (f.geometry.type === "Polygon" || f.geometry.type === "MultiPolygon")) {
+        if (turf.booleanPointInPolygon(p, f)) {
+          f.properties.count += 1;
+          matchCount++;
+          break; 
+        }
+      }
+    }
+  }
+
+  // 3. 최대값 찾기
+  let maxCount = 0;
+  for (const f of geojson.features) {
+    if (f.properties.count > maxCount) maxCount = f.properties.count;
+  }
+  
+  console.log(`밀도 계산 완료: 총 ${points.length}개 중 ${matchCount}개가 구역 내 매칭됨. (최대 밀도: ${maxCount})`);
+  return { geojson, maxCount };
+}
+     function upsertChoropleth(level, aggregated, maxCount){
+  const sourceId = `regions-${level}-src`;
+  const fillId   = `regions-${level}-fill`;
+  const lineId   = `regions-${level}-outline`;
+
+  // 1. 데이터 소스 업데이트
+  // ★ promoteId 옵션 제거: aggregateCounts에서 f.id를 직접 넣었으므로 불필요
+  if (map.getSource(sourceId)) {
+    map.getSource(sourceId).setData(aggregated);
+  } else {
+    map.addSource(sourceId, { type: "geojson", data: aggregated });
+  }
+
+  // 2. Fill 레이어 (채우기)
+  if (!map.getLayer(fillId)) {
+    map.addLayer({
+      id: fillId,
+      type: "fill",
+      source: sourceId,
+      paint: {
+        // feature-state 기반 색상
+        "fill-color": ["coalesce", ["feature-state", "fill"], "rgba(0,0,0,0)"],
+        "fill-opacity": 0.8, // 선명하게
+        "fill-outline-color": "rgba(0,0,0,0)"
+      },
+      layout: { visibility: "visible" }
+    }, "photos-core");
+  } else {
+    map.setLayoutProperty(fillId, "visibility", "visible");
+  }
+
+  // 3. Line 레이어 (경계선)
+  const lineColor = (currentTheme === "dark") ? "#ffffff" : "#334155";
+  if (!map.getLayer(lineId)) {
+    map.addLayer({
+      id: lineId,
+      type: "line",
+      source: sourceId,
+      paint: { 
+        "line-color": lineColor, 
+        "line-width": ["interpolate", ["linear"], ["zoom"], 7, 0.4, 12, 1.2],
+        "line-opacity": 0.3
+      },
+      layout: { visibility: "visible" }
+    }, "photos-core");
+  } else {
+    map.setPaintProperty(lineId, "line-color", lineColor);
+    map.setLayoutProperty(lineId, "visibility", "visible");
+  }
+
+  // 4. 색상 입히기 (Feature State)
+  aggregated.features.forEach((f) => {
+    // aggregateCounts에서 id를 무조건 넣었으므로 f.id 사용
+    const id = f.id; 
+    const count = f.properties.count || 0;
+
+    let color;
+    
+    if (count === 0) {
+      // 데이터 없음: 테마별 투명 틴트
+      color = (currentTheme === "dark") 
+        ? "rgba(255, 255, 255, 0.03)" 
+        : "rgba(0, 0, 0, 0.03)";
+    } else {
+      // 데이터 있음: 파란색 단계
+      const ratio = count / maxCount;
+      const steps = CHORO_COLORS.length - 1;
+      let cIdx = Math.ceil(ratio * steps); // ceil을 써서 1개라도 있으면 색칠
+      
+      if (cIdx < 1) cIdx = 1; // 최소 1단계
+      if (cIdx > steps) cIdx = steps;
+      
+      color = CHORO_COLORS[cIdx];
+    }
+    
+    // Mapbox 상태 업데이트
+    map.setFeatureState({ source: sourceId, id: id }, { fill: color });
+  });
+
+  updateLegend(maxCount);
+}
+
+      function clearChoroplethLayer(level){
+  const sourceId = `regions-${level}-src`;
+  const fillId   = `regions-${level}-fill`;
+  const lineId   = `regions-${level}-outline`;
+  if (map.getLayer(fillId)) map.removeLayer(fillId);
+  if (map.getLayer(lineId)) map.removeLayer(lineId);
+  if (map.getSource(sourceId)) map.removeSource(sourceId);
+}
+
+      async function setLevel(level){
+  currentLevel = level;
+
+  if (!boundaryCache[level]) {
+    const url = level === "sido" ? SIDO_GEOJSON_URL : SIGUNGU_GEOJSON_URL;
+    const res = await fetch(url);
+    const gj = await res.json();
+    // feature.id 보장
+    gj.features.forEach((f,i)=>{ if (f.id==null) f.id = i; });
+    boundaryCache[level] = gj;
+  }
+
+  const other = level === "sido" ? "sigungu" : "sido";
+  clearChoroplethLayer(other);
+
+  const base = JSON.parse(JSON.stringify(boundaryCache[level]));
+  const { geojson, maxCount } = aggregateCounts(base, getCurrentPhotoPoints());
+  maxCountGlobal = maxCount;
+  upsertChoropleth(level, geojson, maxCount);
+}
+
+      function refreshChoroplethWithFilteredPoints(points){
+  if (!map) return;
+  
+  const level = currentLevel; // 현재 선택된 레벨 (sido / sigungu)
+  const cached = boundaryCache[level]; // 캐시된 GeoJSON 가져오기
+
+  // 아직 GeoJSON이 로드되지 않았으면 무시
+  if (!cached) return;
+
+  // 원본 GeoJSON이 오염되지 않게 깊은 복사
+  const cloned = JSON.parse(JSON.stringify(cached));
+
+  // 1. 다시 계산 (Turf.js)
+  const { geojson, maxCount } = aggregateCounts(cloned, points);
+  maxCountGlobal = maxCount;
+
+  // 2. 지도에 반영 (색칠)
+  upsertChoropleth(level, geojson, maxCount);
+}
+
+      function applyDensityVisibility() {
+        const vis = densityEnabled ? "visible" : "none";
+        ["fill", "outline"].forEach(sfx => { setLayerVisibility(`regions-${currentLevel}-${sfx}`, vis); });
+        const legend = document.getElementById("density-legend");
+        if (legend) legend.style.display = (currentMapMode==="density" && densityEnabled) ? "block" : "none";
+        setLayerVisibility("photos-glow", densityEnabled || currentMapMode!=="glow" ? "none" : "visible");
+        if (map && map.getLayer("photos-core")) {
+          map.setPaintProperty("photos-core", "circle-stroke-width", (densityEnabled || currentMapMode!=="glow") ? 0 : 0.5);
+        }
+      }
+      document.querySelectorAll('input[name="region-level"]').forEach((radio) => {
+        radio.addEventListener("change", (e) => {
+          currentLevel = e.target.value;
+          // 현재 모드가 Density라면 즉시 지도를 다시 그림
+          if (currentMapMode === "density") {
+            setLevel(currentLevel);
+          }
+        });
+      });
+      // =============================
+    </script>
+  </body>
+</html>
