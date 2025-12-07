@@ -42,6 +42,34 @@ EXIF 메타데이터(특히 GPS 좌표와 촬영 시각)를 활용하여 사용�
 **Density 모드 시군구**
 <img width="1917" height="911" alt="density1" src="https://github.com/user-attachments/assets/ef99e51c-66ba-4e9b-a757-53895c4db43f" />
 
+---
+## 시연 방법
+1. 깃허브에 있는 파일을 모두 다운로드한다.
+2. test.html을 연결 프로그램을 visual studio code로 연다.
+<img width="1920" height="1020" alt="image" src="https://github.com/user-attachments/assets/83086e49-3730-4e71-ab7d-c2d91adc8b09" />
+3. Open with live servor로 웹을 연다.
+
+Google OAuth 2.0은 승인된 리디렉션 URI(Authorized Redirect URI)와 요청 origin이 완전히 일치해야만 정상적으로 동작합니다.
+
+Live Server로 웹을 열면 다음과 같은 HTTP 기반 주소가 사용됩니다:
+
+- `http://127.0.0.1:5500/test.html`
+- `http://localhost:5500/test.html`
+
+반면, 파일을 직접 더블클릭해 열면 다음과 같이 `file://` 프로토콜이 사용됩니다:
+
+- file:///C:/Users/.../test.html
+
+Google OAuth 보안 정책상:
+
+- `file://` 프로토콜은 승인된 origin으로 등록할 수 없음
+- 리디렉션 URI는 반드시 `http://127.0.0.1:5500/...` 처럼 HTTP 기반이어야 정상 동작함
+
+따라서 OAuth 요청이 발생하면 Google은 `file://` 기반 요청을 차단하며, 그 결과 `invalid_request` 오류가 발생합니다.
+<img width="1920" height="1020" alt="image" src="https://github.com/user-attachments/assets/74f8a2f7-49ce-4da3-9a10-c244098c39f0" />
+4. Google Drive 로그인을 눌러서 로그인한다. (데모버전 구글 아이디와 비번은 다음과 같다. 교수님 확인 후 삭제: )
+<img width="1920" height="1020" alt="image" src="https://github.com/user-attachments/assets/b715f82f-ce63-4667-bb93-b7f171448736" />
+5. 사진이 들어있는 폴더의 ID를 입력 후 '3. 사진 불러오기'를 실행한다. (데모버전 폴더의 ID: 1e88VHekL-d0GUsKvBJNYKExsuyJupqCS)
 
 
 ## Tech Stack
