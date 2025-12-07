@@ -25,10 +25,31 @@ EXIF 메타데이터(특히 GPS 좌표와 촬영 시각)를 활용하여 사용�
 
 ## 📸 Screenshots / Demo
 
+## 📁 Project Structure
 > (필요 시 이미지 또는 GIF를 추가하세요.)  
 > 예: `/assets/images/demo.png`
+## Tech Stack
 
+- Frontend: HTML, CSS, JavaScript
+
+- Mapping: Mapbox GL JS
+
+- Metadata: EXIF GPS, Timestamp
 ---
 
-## 📁 Project Structure
 
+🗄 Data Model Overview
+
+본 프로젝트는 사진 메타데이터 기반의 분석과 시각화를 위해 다음과 같은 정보를 처리합니다.
+
+GPS 좌표 (latitude, longitude)
+
+촬영 시각 (timestamp)
+
+행정구역 단위 (sido, sigungu)
+
+날씨 정보 (weather_id 기반 참조)
+
+사용자 정보 (user_id)
+
+Google Drive 파일/폴더 연동을 위한 식별자
