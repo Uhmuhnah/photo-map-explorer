@@ -27,7 +27,7 @@ EXIF 메타데이터(특히 GPS 좌표와 촬영 시각)를 활용하여 사용�
 
 ## 📁 Project Structure
 > (필요 시 이미지 또는 GIF를 추가하세요.)  
-> 예: `/assets/images/demo.png`
+> 예: `basic1.png`
 ## Tech Stack
 
 - Frontend: HTML, CSS, JavaScript
