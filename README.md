@@ -67,7 +67,7 @@ Google OAuth 보안 정책상:
 
 따라서 OAuth 요청이 발생하면 Google은 `file://` 기반 요청을 차단하며, 그 결과 `invalid_request` 오류가 발생합니다.
 <img width="1920" height="1020" alt="image" src="https://github.com/user-attachments/assets/74f8a2f7-49ce-4da3-9a10-c244098c39f0" />
-4. Google Drive 로그인을 눌러서 로그인한다. (데모버전 구글 아이디와 비번은 다음과 같다. 교수님 확인 후 삭제: )
+4. Google Drive 로그인을 눌러서 로그인한다. (데모버전 구글 아이디와 비번은 다음과 같다. 구글 이메일: testopensourcer@gmail.com 비밀번호: testopensourcer123 )
 <img width="1920" height="1020" alt="image" src="https://github.com/user-attachments/assets/b715f82f-ce63-4667-bb93-b7f171448736" />
 5. 사진이 들어있는 폴더의 ID를 입력 후 '3. 사진 불러오기'를 실행한다. (데모버전 폴더의 ID: 1e88VHekL-d0GUsKvBJNYKExsuyJupqCS)
 
