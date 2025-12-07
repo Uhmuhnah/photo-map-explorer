@@ -71,6 +71,12 @@ Google OAuth 보안 정책상:
 <img width="1920" height="1020" alt="image" src="https://github.com/user-attachments/assets/b715f82f-ce63-4667-bb93-b7f171448736" />
 5. 사진이 들어있는 폴더의 ID를 입력 후 '3. 사진 불러오기'를 실행한다. (데모버전 폴더의 ID: 1e88VHekL-d0GUsKvBJNYKExsuyJupqCS)
 
+“새 이메일로 구글 드라이브 공유 폴더 접근은 가능하지만,
+Google OAuth 앱(3DOG)이 아직 ‘테스트 모드’ 상태라
+OAuth 동의 화면의 테스트 사용자 목록에 없는 계정은
+인증 자체가 차단되고, 그 결과 403 access_denied가 발생합니다.
+이를 해결하기 위해 OAuth 동의 화면 설정에서
+해당 이메일을 테스트 사용자로 추가했습니다.”
 
 ## Tech Stack
 
