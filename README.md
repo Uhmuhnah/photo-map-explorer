@@ -23,11 +23,26 @@ EXIF 메타데이터(특히 GPS 좌표와 촬영 시각)를 활용하여 사용�
 
 ---
 
-## 📸 Screenshots / Demo
+## 📸 Screenshots / Demo (편의상 Darkmode로 진행) 
+**전체 UI 및 Basic 모드** 
+<img width="1917" height="907" alt="basic1" src="https://github.com/user-attachments/assets/0771548c-8a68-4d2b-b319-a66e90656d68" />
+**Basic 모드 확대 모습**
+<img width="1390" height="907" alt="basic3" src="https://github.com/user-attachments/assets/2e5a2c66-6b79-4ace-b90f-e5622ca66554" />
+**특정 기간 모습**
+<img width="1391" height="791" alt="basic2" src="https://github.com/user-attachments/assets/e519667d-c709-4240-abbe-432ce9f92842" />
+**Glow 모드 줌인**
+<img width="1918" height="907" alt="glow3" src="https://github.com/user-attachments/assets/f43fcbed-fbdd-401f-bc67-7d10090e86b6" />
+**Glow 모드 줌아웃**
+<img width="1917" height="912" alt="glow2" src="https://github.com/user-attachments/assets/440e024e-af3b-4860-8471-ab233391f288" />
+**Glow 모드 사진 대표색**
+<img width="1917" height="908" alt="glow1" src="https://github.com/user-attachments/assets/8364c896-dbc1-42aa-8fa1-e1fbad3b01b0" />
+**Density 모드 시도**
+<img width="1918" height="905" alt="density2" src="https://github.com/user-attachments/assets/095c2034-a3e6-4962-b13b-c98ca6da7de1" />
+**Density 모드 시군구**
+<img width="1917" height="911" alt="density1" src="https://github.com/user-attachments/assets/ef99e51c-66ba-4e9b-a757-53895c4db43f" />
 
-## 📁 Project Structure
-> (필요 시 이미지 또는 GIF를 추가하세요.)  
-> 예: `basic1.png`
+
+
 ## Tech Stack
 
 - Frontend: HTML, CSS, JavaScript
@@ -42,14 +57,15 @@ EXIF 메타데이터(특히 GPS 좌표와 촬영 시각)를 활용하여 사용�
 
 본 프로젝트는 사진 메타데이터 기반의 분석과 시각화를 위해 다음과 같은 정보를 처리합니다.
 
+**사진에서 추출하는 EXIF 데이터** 
 GPS 좌표 (latitude, longitude)
 
 촬영 시각 (timestamp)
 
-행정구역 단위 (sido, sigungu)
+**행정구역 단위 (sido, sigungu)**
+행정구역 단위 json 파일의 출처는 다음과 같습니다.
+[시도/ 시군구 행정구역 json 파일 출처]([https://example.com](https://jgws.tistory.com/entry/%EB%8C%80%ED%95%9C%EB%AF%BC%EA%B5%AD-%EB%B2%95%EC%A0%95%EA%B5%AC%EC%97%AD-SHP-%ED%8C%8C%EC%9D%BC%EC%9D%84-GeoJSON%EC%9C%BC%EB%A1%9C-%EB%B3%80%ED%99%98%ED%95%98%EA%B8%B0))
 
 날씨 정보 (weather_id 기반 참조)
-
-사용자 정보 (user_id)
 
 Google Drive 파일/폴더 연동을 위한 식별자
