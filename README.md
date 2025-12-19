@@ -6,7 +6,7 @@ EXIF 메타데이터(특히 GPS 좌표와 촬영 시각)를 활용하여 사용�
 
 ## ✨ Features
 - **구글 드라이브 파일 연결**
-  구글 드라이브 속 파일 안에 있는 이미지를 브라우저로 가져옵니다. (이 프로젝트는 GPS를 포함한 EXIF 파일이 존재하는 사진이 담긴 파일이 필요합니다. 데모 버전 실행할 시 PNG 데이터가 저장된 공유 드라이브 파일을 사용하셔도 됩니다. [예제 파일 링크](https://drive.google.com/drive/folders/1e88VHekL-d0GUsKvBJNYKExsuyJupqCS?usp=drive_link)
+  구글 드라이브 속 파일 안에 있는 이미지를 브라우저로 가져옵니다. (이 프로젝트는 GPS를 포함한 EXIF 파일이 존재하는 사진이 담긴 파일이 필요합니다. [데모 버전](https://uhmuhnah.github.io/photo-map-explorer/) 실행 시 PNG 데이터가 저장된 공유 드라이브 파일로 연결해서 사용하셔도 됩니다. [예제 파일 링크](https://drive.google.com/drive/folders/1e88VHekL-d0GUsKvBJNYKExsuyJupqCS?usp=drive_link) 
 - **지도 기반 사진 탐색**  
   EXIF GPS 정보를 기반으로 사진을 Mapbox 지도 위에 시각적으로 배치합니다.
 
