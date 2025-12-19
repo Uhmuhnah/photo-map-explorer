@@ -6,8 +6,7 @@ EXIF 메타데이터(특히 GPS 좌표와 촬영 시각)를 활용하여 사용�
 
 ## ✨ Features
 - **구글 드라이브 파일 연결**
-  구글 드라이브 속 파일 안에 있는 이미지를 브라우저로 가져옵니다. (이 프로젝트에서는 Google OAuth 웹이 아직 ‘테스트 모드’이고, Mapbox 무료 버전을 사용하고 있기 때문에 데모버전에서 153개의 PNG 데이터가 저장된 공유 드라이브에서 사진을 가져오도록 했습니다. 새로운 Mapbox api키와 구글 드라이브 대신 로컬에서 이미지 파일을 가져오게 한다면 번거로운 절차없이 잘 작동합니다. *꼭 시연 방법을 잘 확인해주시면 감사하겠습니다.*)
-
+  구글 드라이브 속 파일 안에 있는 이미지를 브라우저로 가져옵니다. (이 프로젝트는 GPS를 포함한 EXIF 파일이 존재하는 사진이 담긴 파일이 필요합니다. 데모 버전 실행할 시 PNG 데이터가 저장된 공유 드라이브 파일을 사용하셔도 됩니다. [예제 파일 링크](https://drive.google.com/drive/folders/1e88VHekL-d0GUsKvBJNYKExsuyJupqCS?usp=drive_link)
 - **지도 기반 사진 탐색**  
   EXIF GPS 정보를 기반으로 사진을 Mapbox 지도 위에 시각적으로 배치합니다.
 
@@ -26,59 +25,25 @@ EXIF 메타데이터(특히 GPS 좌표와 촬영 시각)를 활용하여 사용�
 ---
 
 ## 📸 Screenshots / (편의상 Darkmode로 진행) 
-**전체 UI 및 Basic 모드** 
-<img width="1917" height="907" alt="basic1" src="https://github.com/user-attachments/assets/0771548c-8a68-4d2b-b319-a66e90656d68" />
-**Basic 모드 확대 모습**
+**전체 UI** 
+<img width="1920" height="1020" alt="image" src="https://github.com/user-attachments/assets/8630f82d-fcc5-443a-a5a6-d2637f183e3b" />
+구글 드라이브 연결 후 파일 선택에서 원하는 사진이 담긴 파일을 선택하고 사진 불러오기하면 됩니다.
+
+**Basic 모드**
 <img width="1390" height="907" alt="basic3" src="https://github.com/user-attachments/assets/2e5a2c66-6b79-4ace-b90f-e5622ca66554" />
 **특정 기간 모습**
 <img width="1391" height="791" alt="basic2" src="https://github.com/user-attachments/assets/e519667d-c709-4240-abbe-432ce9f92842" />
-**Glow 모드 줌인**
+**Glow 모드**
 <img width="1918" height="907" alt="glow3" src="https://github.com/user-attachments/assets/f43fcbed-fbdd-401f-bc67-7d10090e86b6" />
-**Glow 모드 줌아웃**
 <img width="1917" height="912" alt="glow2" src="https://github.com/user-attachments/assets/440e024e-af3b-4860-8471-ab233391f288" />
-**Glow 모드 사진 대표색**
+**Glow 모드**
 <img width="1917" height="908" alt="glow1" src="https://github.com/user-attachments/assets/8364c896-dbc1-42aa-8fa1-e1fbad3b01b0" />
-**Density 모드 시도**
+**Density 모드**
 <img width="1918" height="905" alt="density2" src="https://github.com/user-attachments/assets/095c2034-a3e6-4962-b13b-c98ca6da7de1" />
-**Density 모드 시군구**
+**Density 모드**
 <img width="1917" height="911" alt="density1" src="https://github.com/user-attachments/assets/ef99e51c-66ba-4e9b-a757-53895c4db43f" />
 
 ---
-## 시연 방법
-1. 깃허브에 있는 파일을 모두 다운로드한다.
-2. test.html을 연결 프로그램을 visual studio code로 연다.
-<img width="1920" height="1020" alt="image" src="https://github.com/user-attachments/assets/83086e49-3730-4e71-ab7d-c2d91adc8b09" />
-3. Open with live servor로 웹을 연다.
-
-Google OAuth 2.0은 승인된 리디렉션 URI(Authorized Redirect URI)와 요청 origin이 완전히 일치해야만 정상적으로 동작합니다.
-
-Live Server로 웹을 열면 다음과 같은 HTTP 기반 주소가 사용됩니다:
-
-- `http://127.0.0.1:5500/test.html`
-- `http://localhost:5500/test.html`
-
-반면, 파일을 직접 더블클릭해 열면 다음과 같이 `file://` 프로토콜이 사용됩니다:
-
-- file:///C:/Users/.../test.html
-
-Google OAuth 보안 정책상:
-
-- `file://` 프로토콜은 승인된 origin으로 등록할 수 없음
-- 리디렉션 URI는 반드시 `http://127.0.0.1:5500/...` 처럼 HTTP 기반이어야 정상 동작함
-
-따라서 OAuth 요청이 발생하면 Google은 `file://` 기반 요청을 차단하며, 그 결과 `invalid_request` 오류가 발생합니다.
-<img width="1920" height="1020" alt="image" src="https://github.com/user-attachments/assets/74f8a2f7-49ce-4da3-9a10-c244098c39f0" />
-4. Google Drive 로그인을 눌러서 로그인한다. (데모버전 구글 아이디와 비번은 다음과 같다. 구글 이메일: testopensourcer@gmail.com 비밀번호: testopensourcer123 )
-<img width="1920" height="1020" alt="image" src="https://github.com/user-attachments/assets/b715f82f-ce63-4667-bb93-b7f171448736" />
-5. 사진이 들어있는 폴더의 ID를 입력 후 '3. 사진 불러오기'를 실행한다. (데모버전 폴더의 ID: 1e88VHekL-d0GUsKvBJNYKExsuyJupqCS)
-
-“새 이메일로 구글 드라이브 공유 폴더 접근은 가능하지만,
-Google OAuth 앱(3DOG)이 아직 ‘테스트 모드’ 상태라
-OAuth 동의 화면의 테스트 사용자 목록에 없는 계정은
-인증 자체가 차단되고, 그 결과 403 access_denied가 발생합니다.
-이를 해결하기 위해 OAuth 동의 화면 설정에서
-해당 이메일을 테스트 사용자로 추가했습니다.”
-
 ## Tech Stack
 
 - Frontend: HTML, CSS, JavaScript
